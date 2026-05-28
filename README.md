@@ -18,17 +18,30 @@ anything that isn't open yet.
   it launches it and waits for its first window before positioning.
 - **Menu-bar only** — no dock icon, no big window. Just an icon in the menu bar.
 
-## Build
+## Build & install
 
-Requires macOS 13+ and the Swift toolchain (Xcode or `swift` on the command line).
+Requires macOS 13+ and the Swift toolchain (Xcode or `xcode-select --install`
+for command-line tools).
+
+```sh
+./scripts/install.sh
+```
+
+That builds, ad-hoc signs, and copies `MonitorLayout.app` to `/Applications`,
+so it shows up in Launchpad, Spotlight (`⌘Space` → "MonitorLayout"), and is
+draggable to your Dock.
+
+If you only want to build without installing system-wide:
 
 ```sh
 ./scripts/make-app.sh
 open .build/MonitorLayout.app
 ```
 
-That builds a release binary and wraps it in a `.app` bundle so the
-`Info.plist` (which marks the app as a menu-bar-only `LSUIElement`) is honored.
+### Launch at login
+
+Turn on **"Launch at login"** in the menu and macOS will start MonitorLayout
+automatically on boot via `SMAppService`.
 
 ## First run: grant Accessibility access
 

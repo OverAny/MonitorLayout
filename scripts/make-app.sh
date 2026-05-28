@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Builds the executable with SwiftPM and wraps it in a minimal .app bundle so
-# Info.plist (LSUIElement etc.) is honored by macOS.
+# Builds the executable with SwiftPM, wraps it in a .app bundle, and ad-hoc
+# code-signs it so macOS doesn't refuse to launch the unsigned binary.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -26,5 +26,10 @@ mkdir -p "${BUNDLE}/Contents/Resources"
 cp "${BIN_PATH}" "${BUNDLE}/Contents/MacOS/${APP_NAME}"
 cp "Resources/Info.plist" "${BUNDLE}/Contents/Info.plist"
 
-echo "Done. Open with:"
-echo "  open ${BUNDLE}"
+echo "Ad-hoc signing..."
+codesign --force --deep --sign - "${BUNDLE}"
+
+echo
+echo "Built: ${BUNDLE}"
+echo "Run from build dir:  open ${BUNDLE}"
+echo "Install to /Applications:  ./scripts/install.sh"

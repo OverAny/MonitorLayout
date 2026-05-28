@@ -65,6 +65,15 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         autoItem.state = Preferences.shared.autoRestore ? .on : .off
         menu.addItem(autoItem)
 
+        let loginItem = NSMenuItem(
+            title: "Launch at login",
+            action: #selector(toggleLoginItem),
+            keyEquivalent: ""
+        )
+        loginItem.target = self
+        loginItem.state = LoginItem.isEnabled ? .on : .off
+        menu.addItem(loginItem)
+
         let permItem = NSMenuItem(
             title: "Accessibility Permission: \(WindowManager.ensureAccessibilityPermission(prompt: false) ? "Granted" : "Required")",
             action: #selector(openAccessibilityPrefs),
@@ -117,6 +126,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func toggleAutoRestore() {
         Preferences.shared.autoRestore.toggle()
+    }
+
+    @objc private func toggleLoginItem() {
+        LoginItem.setEnabled(!LoginItem.isEnabled)
     }
 
     @objc private func openAccessibilityPrefs() {
