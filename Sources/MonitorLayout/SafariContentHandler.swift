@@ -28,6 +28,12 @@ struct SafariContentHandler: ContentHandler {
     func restoreWindows(for app: NSRunningApplication,
                         snapshots: [WindowSnapshot],
                         completion: @escaping () -> Void) {
+        let withContent = snapshots.filter {
+            if case .browserTabs(_, let urls) = $0.content, !urls.isEmpty { return true }
+            return false
+        }
+        guard !withContent.isEmpty else { completion(); return }
+
         var lines: [String] = []
         lines.append("tell application \"Safari\"")
         lines.append("    activate")
@@ -35,7 +41,7 @@ struct SafariContentHandler: ContentHandler {
         lines.append("        close every window")
         lines.append("    end try")
 
-        for snap in snapshots.reversed() {
+        for snap in withContent.reversed() {
             guard case .browserTabs(_, let urls) = snap.content, !urls.isEmpty else { continue }
             lines.append("    set newDoc to make new document with properties {URL:\"\(escape(urls[0]))\"}")
             for url in urls.dropFirst() {
@@ -47,7 +53,7 @@ struct SafariContentHandler: ContentHandler {
         let script = lines.joined(separator: "\n")
         DispatchQueue.global(qos: .userInitiated).async {
             _ = AppleScriptRunner.run(script)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: completion)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7, execute: completion)
         }
     }
 

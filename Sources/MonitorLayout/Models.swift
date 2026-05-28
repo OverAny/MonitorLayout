@@ -73,6 +73,44 @@ struct WindowSnapshot: Codable {
     let isMinimized: Bool
     /// App-specific content captured by a ContentHandler (URLs, open folder, cwd, etc.).
     let content: WindowContent?
+
+    init(bundleId: String, appName: String, executablePath: String?, windowTitle: String?,
+         axWindowIndex: Int, displayId: UInt32, displayIndex: Int, frame: CGRect,
+         normalizedFrame: CGRect, isMinimized: Bool, content: WindowContent?) {
+        self.bundleId = bundleId
+        self.appName = appName
+        self.executablePath = executablePath
+        self.windowTitle = windowTitle
+        self.axWindowIndex = axWindowIndex
+        self.displayId = displayId
+        self.displayIndex = displayIndex
+        self.frame = frame
+        self.normalizedFrame = normalizedFrame
+        self.isMinimized = isMinimized
+        self.content = content
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case bundleId, appName, executablePath, windowTitle, axWindowIndex,
+             displayId, displayIndex, frame, normalizedFrame, isMinimized, content
+    }
+
+    /// Tolerant decoder: defaults missing fields so layouts saved by earlier
+    /// versions of MonitorLayout still load.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        bundleId = try c.decode(String.self, forKey: .bundleId)
+        appName = try c.decode(String.self, forKey: .appName)
+        executablePath = try c.decodeIfPresent(String.self, forKey: .executablePath)
+        windowTitle = try c.decodeIfPresent(String.self, forKey: .windowTitle)
+        axWindowIndex = try c.decodeIfPresent(Int.self, forKey: .axWindowIndex) ?? 0
+        displayId = try c.decode(UInt32.self, forKey: .displayId)
+        displayIndex = try c.decode(Int.self, forKey: .displayIndex)
+        frame = try c.decode(CGRect.self, forKey: .frame)
+        normalizedFrame = try c.decode(CGRect.self, forKey: .normalizedFrame)
+        isMinimized = try c.decodeIfPresent(Bool.self, forKey: .isMinimized) ?? false
+        content = try c.decodeIfPresent(WindowContent.self, forKey: .content)
+    }
 }
 
 struct Layout: Codable, Identifiable {

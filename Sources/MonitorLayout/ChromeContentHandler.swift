@@ -62,8 +62,18 @@ struct ChromeContentHandler: ContentHandler {
         guard let bundleId = app.bundleIdentifier else { completion(); return }
         let name = appName(for: bundleId)
 
-        // Build the AppleScript that closes existing windows then creates new ones
-        // in REVERSE snapshot order so that snapshots[0] ends up as front window (1).
+        let withContent = snapshots.filter {
+            if case .browserTabs(_, let urls) = $0.content, !urls.isEmpty { return true }
+            return false
+        }
+
+        // If none of the snapshots carry content (e.g. saved before content
+        // capture, or Automation was denied), leave existing windows alone and
+        // let WindowManager position whatever already exists.
+        guard !withContent.isEmpty else { completion(); return }
+
+        // Build script that closes existing windows then creates new ones in
+        // REVERSE snapshot order so snapshots[0] ends up as front window (1).
         var lines: [String] = []
         lines.append("tell application \"\(name)\"")
         lines.append("    activate")
@@ -71,10 +81,9 @@ struct ChromeContentHandler: ContentHandler {
         lines.append("        close every window")
         lines.append("    end try")
 
-        for snap in snapshots.reversed() {
+        for snap in withContent.reversed() {
             guard case .browserTabs(_, let urls) = snap.content, !urls.isEmpty else { continue }
             lines.append("    set newWin to make new window")
-            // First URL goes into the auto-created tab; subsequent URLs become new tabs.
             lines.append("    set URL of active tab of newWin to \"\(escape(urls[0]))\"")
             for url in urls.dropFirst() {
                 lines.append("    tell newWin to make new tab with properties {URL:\"\(escape(url))\"}")
@@ -86,8 +95,7 @@ struct ChromeContentHandler: ContentHandler {
 
         DispatchQueue.global(qos: .userInitiated).async {
             _ = AppleScriptRunner.run(script)
-            // Browsers need a moment to layout the new windows before AX positioning.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: completion)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7, execute: completion)
         }
     }
 
