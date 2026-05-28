@@ -20,5 +20,7 @@
     <true/>
     <key>NSHumanReadableCopyright</key>
     <string>MonitorLayout</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>MonitorLayout reads the tabs, open folders, and working directories of supported apps (Chrome, Safari, VSCode, Terminal, iTerm2) so it can restore them when you re-apply a saved window layout.</string>
 </dict>
 </plist>

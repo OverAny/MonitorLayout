@@ -24,7 +24,9 @@ enum WindowManager {
             guard AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &value) == .success,
                   let windows = value as? [AXUIElement] else { continue }
 
-            for window in windows {
+            let handler = ContentHandlerRegistry.shared.handler(forBundleId: bundleId)
+
+            for (idx, window) in windows.enumerated() {
                 guard let frame = axFrame(of: window) else { continue }
                 let title = axString(of: window, attribute: kAXTitleAttribute)
                 let minimized = axBool(of: window, attribute: kAXMinimizedAttribute) ?? false
@@ -33,17 +35,20 @@ enum WindowManager {
                     ?? (displays.first ?? DisplayInfo(id: 0, frame: .zero, isMain: true), 0)
 
                 let normalized = normalize(frame: frame, in: display.frame)
+                let content = handler?.captureContent(for: app, axWindowIndex: idx, windowTitle: title)
 
                 snapshots.append(WindowSnapshot(
                     bundleId: bundleId,
                     appName: app.localizedName ?? bundleId,
                     executablePath: app.bundleURL?.path,
                     windowTitle: title,
+                    axWindowIndex: idx,
                     displayId: display.id,
                     displayIndex: displayIndex,
                     frame: frame,
                     normalizedFrame: normalized,
-                    isMinimized: minimized
+                    isMinimized: minimized,
+                    content: content
                 ))
             }
         }
@@ -62,14 +67,19 @@ enum WindowManager {
             return false
         }
 
-        let window = bestMatch(in: windows, title: snapshot.windowTitle)
+        let window = bestMatch(in: windows, snapshot: snapshot)
         let targetFrame = denormalize(frame: snapshot.normalizedFrame, in: display.frame)
         return setFrame(targetFrame, on: window)
     }
 
-    private static func bestMatch(in windows: [AXUIElement], title: String?) -> AXUIElement {
-        guard let title = title, !title.isEmpty else { return windows[0] }
-        if let exact = windows.first(where: { axString(of: $0, attribute: kAXTitleAttribute) == title }) {
+    /// Prefer the AX index from capture time, then fall back to title match,
+    /// then to the front window.
+    private static func bestMatch(in windows: [AXUIElement], snapshot: WindowSnapshot) -> AXUIElement {
+        if windows.indices.contains(snapshot.axWindowIndex) {
+            return windows[snapshot.axWindowIndex]
+        }
+        if let title = snapshot.windowTitle, !title.isEmpty,
+           let exact = windows.first(where: { axString(of: $0, attribute: kAXTitleAttribute) == title }) {
             return exact
         }
         return windows[0]
